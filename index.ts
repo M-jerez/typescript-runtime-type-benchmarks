@@ -41,6 +41,11 @@ async function main() {
               stdio: 'inherit',
             });
           }
+          if (c === 'deepkit-quick') {
+            childProcess.execSync('npm run compile:deepkit-quick', {
+              stdio: 'inherit',
+            });
+          }
 
           const cmd = [...process.argv.slice(0, 2), 'run-internal', c];
 

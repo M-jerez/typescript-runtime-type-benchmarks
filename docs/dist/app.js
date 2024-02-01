@@ -244,7 +244,7 @@ define("app", ["require", "exports", "preact", "vega", "vega-lite"], function (r
                             spec: {
                                 layer: [
                                     {
-                                        mark: "bar",
+                                        mark: 'bar',
                                         width: 600
                                     },
                                     {

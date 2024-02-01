@@ -43,6 +43,7 @@ export const cases = [
   'yup',
   'zod',
   'deepkit',
+  'deepkit-quick',
 ] as const;
 
 export type CaseName = typeof cases[number];

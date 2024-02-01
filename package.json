@@ -18,6 +18,7 @@
     "docs:watch": "tsc --project tsconfig.docs.json --watch --preserveWatchOutput & serve docs",
     "docs:build": "tsc --project tsconfig.docs.json",
     "compile:deepkit": "deepkit-type-install && rimraf cases/deepkit/build && tsc -p cases/deepkit/tsconfig.json",
+    "compile:deepkit-quick": "deepkit-type-install && rimraf cases/deepkit-quick/build && tsc -p cases/deepkit-quick/tsconfig.json",
     "compile:spectypes": "rimraf cases/spectypes/build && tsc -p cases/spectypes/src && babel cases/spectypes/src --out-dir cases/spectypes/build --extensions \".ts\"",
     "compile:ts-runtime-checks": "rimraf cases/ts-runtime-checks/build && tsc -p cases/ts-runtime-checks/src",
     "compile:typebox": "ts-node cases/typebox/index.ts cases/typebox/build",
