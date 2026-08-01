@@ -1,7 +1,7 @@
 import {
-  createValidate,
-  createHasUnknownKeys,
-  createCloneExactShape,
+  createValidateFn,
+  createHasUnknownKeysFn,
+  createCloneExactShapeFn,
 } from '@ts-runtypes/core';
 
 // This is the scoped `@ts-runtypes/*` project (https://github.com/MionKit/ts-run-types),
@@ -27,7 +27,11 @@ export interface ToBeChecked {
 }
 
 // Loose type guard. Ignores unknown/extra keys (does not reject them).
-export const validate = createValidate<ToBeChecked>();
+//
+// Every `number` here is checked with `typeof x === 'number'` rather than the
+// default `Number.isFinite(x)`, via the project-wide `validate.numberMode`
+// setting in `../build.mjs`.
+export const validate = createValidateFn<ToBeChecked>();
 
 // Returns true when the value carries keys not declared in `ToBeChecked`,
 // recursively (including nested objects). Used to build the strict modes.
@@ -37,18 +41,13 @@ export const validate = createValidate<ToBeChecked>();
 // holds. On this all-required shape the emitter then swaps the per-key scan for a
 // single enumerable-key count compare (and recurses the same way into
 // `deeplyNested`), which is materially faster than scanning every key.
-export const hasUnknownKeys = createHasUnknownKeys<ToBeChecked>(undefined, {
+export const hasUnknownKeys = createHasUnknownKeysFn<ToBeChecked>(undefined, {
   runsAfterValidation: true,
 });
 
 // Used by the `parseSafe` mode to return a value with unknown/extra keys
 // removed. Rather than a delete-based strip (which deopts V8 by mutating object
-// shapes with `delete`), `createCloneExactShape` builds a FRESH value from the
+// shapes with `delete`), `createCloneExactShapeFn` builds a FRESH value from the
 // declared shape, so unknown keys are dropped by construction and the input is
 // never mutated — the same approach typia takes, and materially faster.
-//
-// 0.10 makes this clone-based strip a first-class factory; earlier versions had
-// no `createX` for it, so this case recovered the `prepareForJsonSafe` primitive
-// via `getRTFunction<'pjs'>()`. `createCloneExactShape` is the direct, intended
-// replacement.
-export const cloneWithoutUnknownKeys = createCloneExactShape<ToBeChecked>();
+export const cloneWithoutUnknownKeys = createCloneExactShapeFn<ToBeChecked>();
