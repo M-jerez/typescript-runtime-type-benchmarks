@@ -36,7 +36,24 @@ await esbuild.build({
   // directly, rather than the default `'code'` mode, which ships each validator
   // as serialized params/body strings that are rebuilt at runtime via
   // `new Function(...)`. Emitting functions avoids that runtime reconstruction.
+  //
+  // `validate.numberMode: 'typeof'` is a project-wide default (added in 0.11)
+  // for the base `number` check every generated validator uses. `ts-runtypes`
+  // defaults to `Number.isFinite(x)`, which also rejects `NaN` and `Infinity`;
+  // `'typeof'` emits `typeof x === 'number'`, which accepts them.
+  //
+  // `typeof` is the majority semantics in this suite: a third of the cases here
+  // reject `NaN`, the rest accept it, and the accepting set includes every other
+  // build-time codegen case this one is most directly comparable to (typia,
+  // typebox, deepkit, spectypes, ts-runtime-checks). Matching them keeps the
+  // comparison like-for-like instead of having this case perform a strictly
+  // stronger check than the libraries it is charted against.
   plugins: [
-    runtypes({ cwd: here, tsconfig: 'tsconfig.json', emitMode: 'functions' }),
+    runtypes({
+      cwd: here,
+      tsconfig: 'tsconfig.json',
+      emitMode: 'functions',
+      validate: { numberMode: 'typeof' },
+    }),
   ],
 });
