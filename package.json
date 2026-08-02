@@ -27,6 +27,7 @@
     "compile:type-predicate-generator": "./cases/type-predicate-generator/compile.sh",
     "compile:ts-runtypes": "rimraf cases/ts-runtypes/build && node cases/ts-runtypes/build.mjs && tsc --emitDeclarationOnly --declaration --noEmit false --rootDir cases/ts-runtypes/src --outDir cases/ts-runtypes/build cases/ts-runtypes/src/index.ts",
     "prepare": "ts-patch install",
+    "dce-evidence": "ts-node dce-evidence.ts",
     "download-packages-popularity": "ts-node download-packages-popularity.ts"
   },
   "dependencies": {

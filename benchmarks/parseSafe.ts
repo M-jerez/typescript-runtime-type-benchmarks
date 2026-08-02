@@ -1,4 +1,6 @@
 import { Benchmark } from './helpers/types';
+import { consume } from './helpers/sink';
+import { envEnabled } from './helpers/env';
 import type { ExpectStatic, SuiteAPI, TestAPI } from 'vitest';
 
 export const validateData = Object.freeze({
@@ -16,6 +18,74 @@ export const validateData = Object.freeze({
   },
 });
 
+// Rotating input pool — the second half of the dead-code-elimination fix.
+//
+// The sink (helpers/sink.ts) rescues the `parse*` benchmarks, whose result
+// carries the work. It cannot rescue `assert*`, whose case functions end in
+// `return true`: sinking a literal proves nothing ran. What lets the JIT fold
+// those away is validating ONE frozen constant on every iteration — fully
+// inlined, the whole computation becomes a known-true constant.
+//
+// Rotating over structurally identical but distinct objects removes that
+// constant without changing what is measured: every entry has the same shape
+// (so no megamorphic-call penalty) and is equally valid, only the values
+// differ. Measured on bun, ts-runtime-checks assertLoose: 217.0M ops/s at a
+// 49.5% margin against one constant, versus 79.5M at 13.8% rotating — a 2.7x
+// overstatement, and a margin that becomes a real measurement.
+//
+// Set `BENCHMARK_ROTATE_INPUT=0` to restore the single-constant behaviour.
+const INPUT_POOL_SIZE = 16;
+
+/**
+ * The sample shape, with the numbers widened. `validateData` is a frozen
+ * literal, so TypeScript infers `number: 1`; pooled entries vary that field and
+ * would not be assignable to it.
+ */
+export interface BenchmarkInput {
+  readonly number: number;
+  readonly negNumber: number;
+  readonly maxNumber: number;
+  readonly string: string;
+  readonly longString: string;
+  readonly boolean: boolean;
+  readonly deeplyNested: {
+    readonly foo: string;
+    readonly num: number;
+    readonly bool: boolean;
+  };
+}
+
+const inputPool: readonly BenchmarkInput[] = Object.freeze(
+  Array.from({ length: INPUT_POOL_SIZE }, (_, i) =>
+    Object.freeze({
+      ...validateData,
+      number: i,
+      negNumber: -i,
+      deeplyNested: Object.freeze({ ...validateData.deeplyNested, num: i }),
+    }),
+  ),
+);
+
+const rotateInput = envEnabled('BENCHMARK_ROTATE_INPUT');
+
+let inputCursor = 0;
+
+/**
+ * The value benchmark bodies validate. Rotates through the pool so the JIT
+ * cannot constant-fold the validation, unless disabled by env flag.
+ */
+export function nextInput(): BenchmarkInput {
+  if (!rotateInput) {
+    return validateData;
+  }
+
+  // Power-of-two mask: cheap, and never a bounds check.
+  return inputPool[inputCursor++ & (INPUT_POOL_SIZE - 1)];
+}
+
+/** Test-only view of the pool. */
+export const inputPoolForTests: readonly BenchmarkInput[] = inputPool;
+
 type Fn = (data: unknown) => typeof validateData;
 
 /**
@@ -27,7 +97,9 @@ type Fn = (data: unknown) => typeof validateData;
  */
 export class ParseSafe extends Benchmark<Fn> {
   run() {
-    this.fn(validateData);
+    // See helpers/sink.ts: parseSafe implementations that return a freshly
+    // built object are the ones escape analysis deletes outright.
+    consume(this.fn(nextInput()));
   }
 
   test(describe: SuiteAPI, expect: ExpectStatic, test: TestAPI) {

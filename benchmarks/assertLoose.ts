@@ -1,5 +1,6 @@
 import { Benchmark } from './helpers/types';
-import { validateData } from './parseSafe';
+import { consume } from './helpers/sink';
+import { validateData, nextInput } from './parseSafe';
 import type { ExpectStatic, SuiteAPI, TestAPI } from 'vitest';
 
 type Fn = (data: unknown) => boolean;
@@ -16,7 +17,9 @@ type Fn = (data: unknown) => boolean;
  */
 export class AssertLoose extends Benchmark<Fn> {
   run() {
-    this.fn(validateData);
+    // Sink + rotating input: see helpers/sink.ts and parseSafe.ts's
+    // nextInput(). Both are needed — the sink alone does not fix assert*.
+    consume(this.fn(nextInput()));
   }
 
   test(describe: SuiteAPI, expect: ExpectStatic, test: TestAPI) {
